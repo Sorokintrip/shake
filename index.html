@@ -29,13 +29,13 @@
             display: none;
             font-size: 72px;
             font-weight: bold;
-            color: #39FF14;
+            color: #39FF14; /* Ярко-зеленый цвет */
             text-align: center;
         }
     </style>
 </head>
 <body>
-    <div id="word">ЮЗИЛИЩЕ</div>
+    <div id="word">Код спойлера: ЮЗИЛИЩЕ</div>
     
     <script>
         let tapCount = 0;
@@ -63,6 +63,11 @@
         document.addEventListener('contextmenu', function(e) {
             e.preventDefault();
             return false;
+        });
+        
+        // Скрываем текст при загрузке (дополнительная защита)
+        window.addEventListener('load', function() {
+            wordElement.style.display = 'none';
         });
     </script>
 </body>
