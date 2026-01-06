@@ -22,14 +22,14 @@
         
         #spoiler {
             font-size: 20px;
-            font-weight: bold;
-            color: #00FF00 !important;
+            font-weight: bold;
+            color: #00FF00 !important; /* Ярко-зеленый с !important */
             display: none;
             cursor: default;
             max-width: 200px;
             text-align: center;
             line-height: 1.4;
-            text-shadow: 0 0 5px rgba(0, 255, 0, 0, 5);
+            text-shadow: 0 0 10px #00FF00, 0 0 20px #00FF00; /* Неоновое свечение */
         }
     </style>
 </head>
@@ -144,8 +144,15 @@
         
         function showSpoiler() {
             spoilerRevealed = true;
-            spoilerElement.textContent = 'КОД СПОЙЛЕРА: ЮЗИЛИЩЕ';
+            spoilerElement.textContent = 'ЮЗИЛИЩЕ';
             spoilerElement.style.display = 'block';
+            
+            // Дополнительно устанавливаем цвет через JavaScript
+            spoilerElement.style.color = '#00FF00';
+            spoilerElement.style.fontSize = '20px';
+            spoilerElement.style.fontWeight = 'bold';
+            spoilerElement.style.textShadow = '0 0 10px #00FF00, 0 0 20px #00FF00';
+            
             window.removeEventListener('devicemotion', handleMotion);
         }
         
