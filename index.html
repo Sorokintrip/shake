@@ -3,137 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title></title>
     <style>
-        html, body {
+        * {
             margin: 0;
             padding: 0;
-            background: transparent;
+            box-sizing: border-box;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            width: 100vw;
+            height: 100vh;
             overflow: hidden;
+            background-color: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100%;
-            user-select: none;
-        }
-        #container {
-            display: inline-block;
-            text-align: center;
-        }
-        #message {
             font-family: Arial, sans-serif;
-            font-size: 24px;
-            color: green;
+            cursor: pointer;
+        }
+        
+        #word {
             display: none;
+            font-size: 72px;
+            font-weight: bold;
+            color: #39FF14;
+            text-align: center;
         }
     </style>
 </head>
 <body>
-    <div id="container">
-        <div id="message">ПИПИДАСТ</div>
-    </div>
-
+    <div id="word">ЮЗИЛИЩЕ</div>
+    
     <script>
-        const message = document.getElementById('message');
-        let messageShown = false;
-        let lastShakeTime = 0;
-        const SHAKE_THRESHOLD = 15;
-        const SHAKE_INTERVAL = 300;
-        const REQUIRED_TIME = 5000;
-        let totalShakeTime = 0;
-        let shakeStartTime = null;
-        let isShaking = false;
-        let lastX = null, lastY = null, lastZ = null;
-
-        function handleMotion(event) {
-            if (messageShown) return;
-
-            const acceleration = event.accelerationIncludingGravity;
-            const currentTime = Date.now();
-
-            if (lastX !== null && lastY !== null && lastZ !== null) {
-                const deltaX = Math.abs(lastX - acceleration.x);
-                const deltaY = Math.abs(lastY - acceleration.y);
-                const deltaZ = Math.abs(lastZ - acceleration.z);
-
-                const isShakingNow = (deltaX > SHAKE_THRESHOLD || 
-                                     deltaY > SHAKE_THRESHOLD || 
-                                     deltaZ > SHAKE_THRESHOLD) &&
-                                    (currentTime - lastShakeTime) > SHAKE_INTERVAL;
-
-                if (isShakingNow) {
-                    lastShakeTime = currentTime;
-                    
-                    if (!isShaking) {
-                        isShaking = true;
-                        shakeStartTime = currentTime;
-                    } else {
-                        totalShakeTime = currentTime - shakeStartTime;
-                        
-                        if (totalShakeTime >= REQUIRED_TIME) {
-                            showMessage();
-                        }
-                    }
-                }
+        let tapCount = 0;
+        const maxTaps = 10;
+        const wordElement = document.getElementById('word');
+        
+        function handleTap() {
+            tapCount++;
+            
+            if (tapCount >= maxTaps) {
+                wordElement.style.display = 'block';
+                document.body.removeEventListener('click', handleTap);
+                document.body.removeEventListener('touchstart', handleTouch);
             }
-
-            lastX = acceleration.x;
-            lastY = acceleration.y;
-            lastZ = acceleration.z;
         }
-
-        function showMessage() {
-            message.style.display = 'block';
-            messageShown = true;
-            window.removeEventListener('devicemotion', handleMotion);
+        
+        function handleTouch(e) {
+            e.preventDefault();
+            handleTap();
         }
-
-        function resetShakeCounter() {
-            if (messageShown) return;
-            isShaking = false;
-            shakeStartTime = null;
-            totalShakeTime = 0;
-        }
-
-        // Автоматический сброс если нет тряски 1 секунду
-        setInterval(() => {
-            if (isShaking && !messageShown && Date.now() - lastShakeTime > 1000) {
-                resetShakeCounter();
-            }
-        }, 500);
-
-        // Инициализация акселерометра
-        if (typeof DeviceMotionEvent.requestPermission === 'function') {
-            DeviceMotionEvent.requestPermission()
-                .then(permissionState => {
-                    if (permissionState === 'granted') {
-                        window.addEventListener('devicemotion', handleMotion);
-                    }
-                })
-                .catch(console.error);
-        } else {
-            window.addEventListener('devicemotion', handleMotion);
-        }
-
-        // Для тестирования на ПК
-        document.addEventListener('keydown', function(e) {
-            if (e.code === 'Space' && !messageShown) {
-                e.preventDefault();
-                if (!isShaking) {
-                    isShaking = true;
-                    shakeStartTime = Date.now();
-                }
-                
-                totalShakeTime = Date.now() - shakeStartTime;
-                if (totalShakeTime >= REQUIRED_TIME) {
-                    showMessage();
-                }
-            }
-        });
-
-        document.addEventListener('keyup', function(e) {
-            if (e.code === 'Space') {
-                resetShakeCounter();
-            }
+        
+        document.body.addEventListener('click', handleTap);
+        document.body.addEventListener('touchstart', handleTouch);
+        
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
         });
     </script>
 </body>
