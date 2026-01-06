@@ -5,51 +5,38 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title></title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
         body {
             font-family: Arial, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-            background-color: #f0f0f0;
-            text-align: center;
+            background-color: #ffffff;
             user-select: none;
             -webkit-user-select: none;
             -moz-user-select: none;
             -ms-user-select: none;
+            overflow: hidden;
         }
         
         #spoiler {
             font-size: 14px;
-            color: #333;
+            color: #000000;
             display: none;
             cursor: default;
-            max-width: 300px;
-            word-break: break-word;
+            max-width: 200px;
+            text-align: center;
             line-height: 1.4;
         }
         
-        .overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.95);
-            color: white;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-            font-size: 14px;
-            text-align: center;
-            padding: 20px;
-        }
-        
-        .hidden-text {
-            display: none;
+        .hidden {
+            display: none !important;
         }
         
         .no-select {
@@ -60,17 +47,17 @@
         }
     </style>
 </head>
-<body class="no-select" oncontextmenu="return false;">
+<body class="no-select">
     <div id="spoiler"></div>
+
     <script>
-        // Блокировка контекстного меню
+        // Запрет контекстного меню без сообщений
         document.addEventListener('contextmenu', function(e) {
             e.preventDefault();
-            showProtectionOverlay();
             return false;
         });
         
-        // Блокировка горячих клавиш
+        // Запрет горячих клавиш без сообщений
         document.addEventListener('keydown', function(e) {
             if (
                 e.ctrlKey && (e.keyCode === 85 || e.keyCode === 83) ||
@@ -78,12 +65,11 @@
                 (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67))
             ) {
                 e.preventDefault();
-                showProtectionOverlay();
                 return false;
             }
         });
         
-        // Блокировка выделения текста
+        // Полная блокировка выделения
         document.addEventListener('selectstart', function(e) {
             if (!document.getElementById('spoiler').style.display || 
                 document.getElementById('spoiler').style.display === 'none') {
@@ -94,15 +80,11 @@
         
         // Блокировка копирования
         document.addEventListener('copy', function(e) {
-            if (!document.getElementById('spoiler').style.display || 
-                document.getElementById('spoiler').style.display === 'none') {
-                e.preventDefault();
-                showProtectionOverlay();
-                return false;
-            }
+            e.preventDefault();
+            return false;
         });
         
-        // Защита от вставки и перетаскивания
+        // Блокировка вставки и перетаскивания
         document.addEventListener('paste', function(e) {
             e.preventDefault();
             return false;
@@ -113,54 +95,36 @@
             return false;
         });
         
-        // Защита от DevTools
-        function detectDevTools() {
-            const threshold = 160;
-            const widthThreshold = window.outerWidth - window.innerWidth > threshold;
-            const heightThreshold = window.outerHeight - window.innerHeight > threshold;
-            
-            if (widthThreshold || heightThreshold) {
-                showProtectionOverlay();
-                document.body.innerHTML = '';
-                document.body.style.backgroundColor = 'black';
-            }
-        }
-        
-        setInterval(detectDevTools, 1000);
-        
-        function showProtectionOverlay() {
-            const overlay = document.getElementById('protectionOverlay');
-            overlay.style.display = 'flex';
-            setTimeout(() => {
-                overlay.style.display = 'none';
-            }, 2000);
-        }
-        
         // Основная логика тряски
         let shakeCount = 0;
         let shakeTimer = null;
         let isShaking = false;
         let lastShakeTime = 0;
         const SHAKE_THRESHOLD = 15;
-        const SHAKE_DURATION = 3000;
+        const SHAKE_DURATION = 5000; // 5 секунд
         const SHAKE_INTERVAL = 200;
-        
-        const spoilerElement = document.getElementById('spoiler');
         let spoilerRevealed = false;
         
-        // Проверяем поддержку DeviceMotionEvent
+        const spoilerElement = document.getElementById('spoiler');
+        
+        // Начальная проверка разрешений для iOS
         if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-            // iOS 13+ требует разрешения
-            document.body.addEventListener('click', function() {
-                DeviceMotionEvent.requestPermission()
-                    .then(permissionState => {
-                        if (permissionState === 'granted') {
-                            startShakeDetection();
-                        }
-                    })
-                    .catch(console.error);
-            });
+            // Автоматически запрашиваем разрешение при первом касании
+            let permissionRequested = false;
+            document.addEventListener('touchstart', function requestPermissionOnce() {
+                if (!permissionRequested) {
+                    permissionRequested = true;
+                    DeviceMotionEvent.requestPermission()
+                        .then(permissionState => {
+                            if (permissionState === 'granted') {
+                                startShakeDetection();
+                            }
+                        })
+                        .catch(() => {});
+                }
+            }, { once: true });
         } else {
+            // Для Android и других устройств
             startShakeDetection();
         }
         
@@ -169,6 +133,8 @@
         }
         
         function handleMotion(event) {
+            if (spoilerRevealed) return; // Если текст уже показан, не обрабатываем тряску
+            
             const acceleration = event.accelerationIncludingGravity;
             const currentTime = new Date().getTime();
             
@@ -185,84 +151,90 @@
                     isShaking = true;
                     shakeCount = 0;
                     
+                    // Создаем визуальный индикатор тряски (невидимый для пользователя)
+                    const indicator = document.createElement('div');
+                    indicator.style.position = 'fixed';
+                    indicator.style.top = '-100px';
+                    indicator.style.left = '-100px';
+                    indicator.style.width = '1px';
+                    indicator.style.height = '1px';
+                    indicator.style.opacity = '0';
+                    document.body.appendChild(indicator);
+                    
                     shakeTimer = setInterval(() => {
                         shakeCount += 100;
                         
+                        // Обновляем индикатор
+                        indicator.textContent = Math.floor(shakeCount / 1000);
+                        
                         if (shakeCount >= SHAKE_DURATION) {
                             clearInterval(shakeTimer);
-                            showSpoiler();
+                            isShaking = false;
+                            document.body.removeChild(indicator);
+                            revealSpoiler();
                         }
                     }, 100);
                 }
             }
         }
         
-        function showSpoiler() {
-            const encoded = document.getElementById('encryptedSpoiler').textContent;
-            const decodedText = decodeURIComponent(encoded);
+        function revealSpoiler() {
+            // Расшифрованный текст спойлера
+            const spoilerText = decodeURIComponent('%D0%AE%D0%97%D0%98%D0%9B%D0%98%D0%A9%D0%95');
             
-            spoilerElement.textContent = decodedText;
+            spoilerElement.textContent = spoilerText;
             spoilerElement.style.display = 'block';
-            isShaking = false;
             spoilerRevealed = true;
             
-            spoilerElement.style.userSelect = 'text';
-            spoilerElement.style.webkitUserSelect = 'text';
-            
-            setTimeout(() => {
-                spoilerElement.style.display = 'none';
-                spoilerElement.style.userSelect = 'none';
-                spoilerElement.style.webkitUserSelect = 'none';
-                spoilerRevealed = false;
-            }, 10000);
+            // Останавливаем обработку тряски
+            window.removeEventListener('devicemotion', handleMotion);
         }
         
         // Останавливаем тряску, если телефон перестали трясти
         let inactivityTimer;
-        window.addEventListener('devicemotion', () => {
-            clearTimeout(inactivityTimer);
-            inactivityTimer = setTimeout(() => {
-                if (isShaking) {
-                    clearInterval(shakeTimer);
-                    isShaking = false;
-                    shakeCount = 0;
-                }
-            }, 500);
+        window.addEventListener('devicemotion', function checkInactivity() {
+            if (isShaking && !spoilerRevealed) {
+                clearTimeout(inactivityTimer);
+                inactivityTimer = setTimeout(() => {
+                    if (isShaking) {
+                        clearInterval(shakeTimer);
+                        isShaking = false;
+                        shakeCount = 0;
+                    }
+                }, 500);
+            }
         });
         
-        // Объект для хранения текста
-        Object.defineProperty(window, 'spoilerText', {
-            value: decodeURIComponent('%D0%AE%D0%97%D0%98%D0%9B%D0%98%D0%A9%D0%95'),
-            writable: false,
-            configurable: false,
-            enumerable: false
+        // Защита от переключения вкладок - текст остается видимым
+        document.addEventListener('visibilitychange', function() {
+            if (spoilerRevealed && document.hidden) {
+                // При возвращении на страницу текст остается видимым
+                setTimeout(() => {
+                    if (document.hidden === false && spoilerRevealed) {
+                        spoilerElement.style.display = 'block';
+                    }
+                }, 100);
+            }
         });
         
-        // Запрет на открытие в iframe
+        // Защита от iframe
         if (window.self !== window.top) {
-            document.body.innerHTML = '';
-            document.body.style.backgroundColor = 'black';
+            window.top.location = window.self.location;
         }
         
-        // Искажение в DevTools
-        const debugHandler = setInterval(() => {
-            const start = new Date();
-            debugger;
-            const end = new Date();
-            if (end - start > 100) {
-                document.body.innerHTML = '';
-                document.body.style.backgroundColor = 'black';
-                clearInterval(debugHandler);
-            }
-        }, 1000);
+        // Минимальная защита от DevTools (без сообщений)
+        setInterval(function() {
+            const debugDiv = document.createElement('div');
+            debugDiv.style.display = 'none';
+            Object.defineProperty(debugDiv, 'id', {
+                get: function() {
+                    document.body.innerHTML = '';
+                    throw new Error('Debugging detected');
+                }
+            });
+            console.log(debugDiv);
+        }, 5000);
         
-        // Скрытие кода при переключении вкладок
-        document.addEventListener('visibilitychange', function() {
-            if (document.hidden && spoilerRevealed) {
-                spoilerElement.style.display = 'none';
-                spoilerRevealed = false;
-            }
-        });
     </script>
     
     <noscript>
