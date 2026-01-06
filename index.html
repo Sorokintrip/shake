@@ -3,188 +3,150 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title></title>
     <style>
-        body {
+        html, body {
             margin: 0;
             padding: 0;
-            font-family: Arial, sans-serif;
+            background: transparent;
+            overflow: hidden;
             display: flex;
-            justify-content: center;
             align-items: center;
-            min-height: 100vh;
-            background-color: #ffffff;
+            justify-content: center;
+            height: 100%;
             user-select: none;
-            -webkit-user-select: none;
-            -moz-user-select: none;
-            -ms-user-select: none;
         }
-        
-        #spoiler {
-            font-size: 20px;
-            font-weight: bold;
-            color: #00FF00;
-            display: none;
-            cursor: default;
-            max-width: 200px;
+        #container {
+            display: inline-block;
             text-align: center;
-            line-height: 1.4;
-            text-shadow: 0 0 10px #00FF00;
+        }
+        #message {
+            font-family: Arial, sans-serif;
+            font-size: 24px;
+            color: green;
+            display: none;
         }
     </style>
 </head>
 <body>
-    <div id="spoiler"></div>
+    <div id="container">
+        <div id="message">ПИПИДАСТР</div>
+    </div>
 
     <script>
-        // Флаг для отслеживания состояния
-        let spoilerRevealed = false;
-        let isShaking = false;
+        const message = document.getElementById('message');
+        let shakeTimeout;
         let shakeCount = 0;
-        let shakeTimer = null;
+        let messageShown = false;
         let lastShakeTime = 0;
-        
-        const SHAKE_THRESHOLD = 15;
-        const SHAKE_DURATION = 5000; // 5 секунд
-        const SHAKE_INTERVAL = 200;
-        
-        const spoilerElement = document.getElementById('spoiler');
-        
-        // Показываем спойлер
-        function showSpoiler() {
-            if (spoilerRevealed) return;
-            
-            spoilerRevealed = true;
-            spoilerElement.textContent = 'Код спойлер: ЮЗИЛИЩЕ';
-            spoilerElement.style.display = 'block';
-            spoilerElement.style.color = '#00FF00';
-            spoilerElement.style.fontSize = '20px';
-            spoilerElement.style.fontWeight = 'bold';
-            
-            // Останавливаем отслеживание тряски
-            window.removeEventListener('devicemotion', handleMotion);
-        }
-        
-        // Обработчик движения устройства
+        const SHAKE_THRESHOLD = 15; // Порог силы тряски
+        const SHAKE_INTERVAL = 300; // Минимальный интервал между трясками (мс)
+        const REQUIRED_TIME = 5000; // 5 секунд тряски
+        let totalShakeTime = 0;
+        let shakeStartTime = null;
+        let isShaking = false;
+
+        // Данные с акселерометра
+        let lastX = null, lastY = null, lastZ = null;
+
         function handleMotion(event) {
-            if (spoilerRevealed || !event.accelerationIncludingGravity) return;
-            
+            if (messageShown) return; // Если сообщение уже показано, ничего не делаем
+
             const acceleration = event.accelerationIncludingGravity;
             const currentTime = Date.now();
-            
-            // Защита от слишком частых срабатываний
-            if (currentTime - lastShakeTime < SHAKE_INTERVAL) {
-                return;
-            }
-            
-            // Рассчитываем силу тряски
-            const shakeForce = Math.abs(acceleration.x) + 
-                              Math.abs(acceleration.y) + 
-                              Math.abs(acceleration.z);
-            
-            if (shakeForce > SHAKE_THRESHOLD) {
-                lastShakeTime = currentTime;
-                
-                if (!isShaking) {
-                    isShaking = true;
-                    shakeCount = 0;
+
+            if (lastX !== null && lastY !== null && lastZ !== null) {
+                const deltaX = Math.abs(lastX - acceleration.x);
+                const deltaY = Math.abs(lastY - acceleration.y);
+                const deltaZ = Math.abs(lastZ - acceleration.z);
+
+                // Определяем тряску
+                if ((deltaX > SHAKE_THRESHOLD || deltaY > SHAKE_THRESHOLD || deltaZ > SHAKE_THRESHOLD) &&
+                    (currentTime - lastShakeTime) > SHAKE_INTERVAL) {
                     
-                    // Запускаем таймер
-                    shakeTimer = setInterval(() => {
-                        shakeCount += 100;
+                    lastShakeTime = currentTime;
+                    
+                    if (!isShaking) {
+                        // Начало тряски
+                        isShaking = true;
+                        shakeStartTime = currentTime;
+                    } else {
+                        // Продолжение тряски
+                        totalShakeTime = currentTime - shakeStartTime;
                         
-                        if (shakeCount >= SHAKE_DURATION) {
-                            clearInterval(shakeTimer);
-                            isShaking = false;
-                            showSpoiler();
+                        // Проверяем, набрали ли мы 5 секунд
+                        if (totalShakeTime >= REQUIRED_TIME) {
+                            showMessage();
                         }
-                    }, 100);
+                    }
+                } else {
+                    // Если тряска прекратилась
+                    if (isShaking) {
+                        const timeSinceLastShake = currentTime - lastShakeTime;
+                        
+                        // Если прошло больше 500мс без тряски - сбрасываем
+                        if (timeSinceLastShake > 500) {
+                            resetShakeCounter();
+                        }
+                    }
                 }
             }
+
+            // Сохраняем текущие значения для следующего сравнения
+            lastX = acceleration.x;
+            lastY = acceleration.y;
+            lastZ = acceleration.z;
         }
-        
-        // Инициализация
-        function init() {
-            // Проверяем, поддерживается ли DeviceMotion
-            if (!window.DeviceMotionEvent) {
-                console.log('DeviceMotion не поддерживается');
-                return;
-            }
+
+        function showMessage() {
+            message.style.display = 'block';
+            messageShown = true;
             
-            // Для iOS 13+ нужен явный запрос разрешения
-            if (typeof DeviceMotionEvent.requestPermission === 'function') {
-                // Создаем кнопку для запроса разрешения (невидимую)
-                const permissionBtn = document.createElement('button');
-                permissionBtn.style.cssText = `
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    width: 100%;
-                    height: 100%;
-                    opacity: 0;
-                    cursor: pointer;
-                    z-index: 9999;
-                `;
-                permissionBtn.textContent = '';
-                document.body.appendChild(permissionBtn);
-                
-                permissionBtn.onclick = function() {
-                    DeviceMotionEvent.requestPermission()
-                        .then(permissionState => {
-                            if (permissionState === 'granted') {
-                                startMotionTracking();
-                                document.body.removeChild(permissionBtn);
-                            }
-                        })
-                        .catch(console.error);
-                    return false;
-                };
-            } else {
-                // Для Android и других устройств
-                startMotionTracking();
-            }
+            // Отписываемся от событий акселерометра
+            window.removeEventListener('devicemotion', handleMotion);
         }
-        
-        function startMotionTracking() {
+
+        function resetShakeCounter() {
+            isShaking = false;
+            shakeStartTime = null;
+            totalShakeTime = 0;
+        }
+
+        // Запрашиваем разрешение на доступ к акселерометру (для iOS 13+)
+        if (typeof DeviceMotionEvent.requestPermission === 'function') {
+            DeviceMotionEvent.requestPermission()
+                .then(permissionState => {
+                    if (permissionState === 'granted') {
+                        window.addEventListener('devicemotion', handleMotion);
+                    }
+                })
+                .catch(console.error);
+        } else {
+            // Для Android и других браузеров
             window.addEventListener('devicemotion', handleMotion);
         }
-        
-        // Сброс таймера при отсутствии движения
-        let inactivityTimer;
-        function resetShakeTimer() {
-            if (isShaking && !spoilerRevealed) {
-                clearTimeout(inactivityTimer);
-                inactivityTimer = setTimeout(() => {
-                    if (isShaking) {
-                        clearInterval(shakeTimer);
-                        isShaking = false;
-                        shakeCount = 0;
-                    }
-                }, 500);
-            }
-        }
-        
-        // Добавляем обработчик для сброса
-        window.addEventListener('devicemotion', resetShakeTimer);
-        
-        // Запускаем при загрузке страницы
-        document.addEventListener('DOMContentLoaded', init);
-        
-        // Альтернативный способ для тестирования (работает в iframe)
-        document.addEventListener('click', function() {
-            // Если долго жмем (3 секунды), показываем спойлер для теста
-            let clickTimer = setTimeout(() => {
-                if (!spoilerRevealed) {
-                    showSpoiler();
+
+        // Обработчик для демо-режима на компьютере
+        document.addEventListener('keydown', function(e) {
+            if (e.code === 'Space' && !messageShown) {
+                // Симуляция тряски для тестирования на ПК
+                if (!isShaking) {
+                    isShaking = true;
+                    shakeStartTime = Date.now();
                 }
-            }, 3000);
-            
-            document.addEventListener('mouseup', function cancelTest() {
-                clearTimeout(clickTimer);
-                document.removeEventListener('mouseup', cancelTest);
-            });
+                
+                totalShakeTime = Date.now() - shakeStartTime;
+                
+                if (totalShakeTime >= REQUIRED_TIME) {
+                    showMessage();
+                }
+            }
         });
-        
+
+        document.addEventListener('keyup', function(e) {
+            if (e.code === 'Space') {
+                resetShakeCounter();
+            }
+        });
     </script>
 </body>
 </html>
