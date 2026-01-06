@@ -34,22 +34,18 @@
 
     <script>
         const message = document.getElementById('message');
-        let shakeTimeout;
-        let shakeCount = 0;
         let messageShown = false;
         let lastShakeTime = 0;
-        const SHAKE_THRESHOLD = 15; // Порог силы тряски
-        const SHAKE_INTERVAL = 300; // Минимальный интервал между трясками (мс)
-        const REQUIRED_TIME = 5000; // 5 секунд тряски
+        const SHAKE_THRESHOLD = 15;
+        const SHAKE_INTERVAL = 300;
+        const REQUIRED_TIME = 5000;
         let totalShakeTime = 0;
         let shakeStartTime = null;
         let isShaking = false;
-
-        // Данные с акселерометра
         let lastX = null, lastY = null, lastZ = null;
 
         function handleMotion(event) {
-            if (messageShown) return; // Если сообщение уже показано, ничего не делаем
+            if (messageShown) return;
 
             const acceleration = event.accelerationIncludingGravity;
             const currentTime = Date.now();
@@ -59,39 +55,27 @@
                 const deltaY = Math.abs(lastY - acceleration.y);
                 const deltaZ = Math.abs(lastZ - acceleration.z);
 
-                // Определяем тряску
-                if ((deltaX > SHAKE_THRESHOLD || deltaY > SHAKE_THRESHOLD || deltaZ > SHAKE_THRESHOLD) &&
-                    (currentTime - lastShakeTime) > SHAKE_INTERVAL) {
-                    
+                const isShakingNow = (deltaX > SHAKE_THRESHOLD || 
+                                     deltaY > SHAKE_THRESHOLD || 
+                                     deltaZ > SHAKE_THRESHOLD) &&
+                                    (currentTime - lastShakeTime) > SHAKE_INTERVAL;
+
+                if (isShakingNow) {
                     lastShakeTime = currentTime;
                     
                     if (!isShaking) {
-                        // Начало тряски
                         isShaking = true;
                         shakeStartTime = currentTime;
                     } else {
-                        // Продолжение тряски
                         totalShakeTime = currentTime - shakeStartTime;
                         
-                        // Проверяем, набрали ли мы 5 секунд
                         if (totalShakeTime >= REQUIRED_TIME) {
                             showMessage();
-                        }
-                    }
-                } else {
-                    // Если тряска прекратилась
-                    if (isShaking) {
-                        const timeSinceLastShake = currentTime - lastShakeTime;
-                        
-                        // Если прошло больше 500мс без тряски - сбрасываем
-                        if (timeSinceLastShake > 500) {
-                            resetShakeCounter();
                         }
                     }
                 }
             }
 
-            // Сохраняем текущие значения для следующего сравнения
             lastX = acceleration.x;
             lastY = acceleration.y;
             lastZ = acceleration.z;
@@ -100,18 +84,24 @@
         function showMessage() {
             message.style.display = 'block';
             messageShown = true;
-            
-            // Отписываемся от событий акселерометра
             window.removeEventListener('devicemotion', handleMotion);
         }
 
         function resetShakeCounter() {
+            if (messageShown) return;
             isShaking = false;
             shakeStartTime = null;
             totalShakeTime = 0;
         }
 
-        // Запрашиваем разрешение на доступ к акселерометру (для iOS 13+)
+        // Автоматический сброс если нет тряски 1 секунду
+        setInterval(() => {
+            if (isShaking && !messageShown && Date.now() - lastShakeTime > 1000) {
+                resetShakeCounter();
+            }
+        }, 500);
+
+        // Инициализация акселерометра
         if (typeof DeviceMotionEvent.requestPermission === 'function') {
             DeviceMotionEvent.requestPermission()
                 .then(permissionState => {
@@ -121,21 +111,19 @@
                 })
                 .catch(console.error);
         } else {
-            // Для Android и других браузеров
             window.addEventListener('devicemotion', handleMotion);
         }
 
-        // Обработчик для демо-режима на компьютере
+        // Для тестирования на ПК
         document.addEventListener('keydown', function(e) {
             if (e.code === 'Space' && !messageShown) {
-                // Симуляция тряски для тестирования на ПК
+                e.preventDefault();
                 if (!isShaking) {
                     isShaking = true;
                     shakeStartTime = Date.now();
                 }
                 
                 totalShakeTime = Date.now() - shakeStartTime;
-                
                 if (totalShakeTime >= REQUIRED_TIME) {
                     showMessage();
                 }
