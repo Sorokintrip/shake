@@ -23,13 +23,13 @@
         #spoiler {
             font-size: 20px;
             font-weight: bold;
-            color: #00FF00 !important; /* Ярко-зеленый с !important */
+            color: #00FF00;
             display: none;
             cursor: default;
             max-width: 200px;
             text-align: center;
             line-height: 1.4;
-            text-shadow: 0 0 5px #00FF00, 0 0 20px #00FF00; /* Неоновое свечение */
+            text-shadow: 0 0 10px #00FF00;
         }
     </style>
 </head>
@@ -37,90 +37,50 @@
     <div id="spoiler"></div>
 
     <script>
-        // Запрет контекстного меню
-        document.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-            return false;
-        });
-        
-        // Запрет горячих клавиш
-        document.addEventListener('keydown', function(e) {
-            if (
-                e.ctrlKey && (e.keyCode === 85 || e.keyCode === 83) ||
-                e.keyCode === 123 ||
-                (e.ctrlKey && e.shiftKey && (e.keyCode === 73 || e.keyCode === 74 || e.keyCode === 67))
-            ) {
-                e.preventDefault();
-                return false;
-            }
-        });
-        
-        // Блокировка выделения и копирования
-        document.addEventListener('selectstart', function(e) {
-            e.preventDefault();
-            return false;
-        });
-        
-        document.addEventListener('copy', function(e) {
-            e.preventDefault();
-            return false;
-        });
-        
-        // Основная логика тряски
+        // Флаг для отслеживания состояния
+        let spoilerRevealed = false;
+        let isShaking = false;
         let shakeCount = 0;
         let shakeTimer = null;
-        let isShaking = false;
         let lastShakeTime = 0;
+        
         const SHAKE_THRESHOLD = 15;
-        const SHAKE_DURATION = 5000;
+        const SHAKE_DURATION = 5000; // 5 секунд
         const SHAKE_INTERVAL = 200;
-        let spoilerRevealed = false;
         
         const spoilerElement = document.getElementById('spoiler');
         
-        // Инициализация датчиков движения
-        function initShakeDetection() {
-            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-                // iOS 13+
-                let permissionRequested = false;
-                const requestPermission = function() {
-                    if (!permissionRequested) {
-                        permissionRequested = true;
-                        DeviceMotionEvent.requestPermission()
-                            .then(permissionState => {
-                                if (permissionState === 'granted') {
-                                    startShakeDetection();
-                                }
-                            })
-                            .catch(() => {});
-                    }
-                };
-                
-                document.addEventListener('touchstart', requestPermission, { once: true });
-                document.addEventListener('click', requestPermission, { once: true });
-            } else {
-                // Другие устройства
-                startShakeDetection();
-            }
-        }
-        
-        function startShakeDetection() {
-            if (window.DeviceMotionEvent) {
-                window.addEventListener('devicemotion', handleMotion);
-            }
-        }
-        
-        function handleMotion(event) {
+        // Показываем спойлер
+        function showSpoiler() {
             if (spoilerRevealed) return;
+            
+            spoilerRevealed = true;
+            spoilerElement.textContent = 'Код спойлера: ЮЗИЛИЩЕ';
+            spoilerElement.style.display = 'block';
+            spoilerElement.style.color = '#00FF00';
+            spoilerElement.style.fontSize = '20px';
+            spoilerElement.style.fontWeight = 'bold';
+            
+            // Останавливаем отслеживание тряски
+            window.removeEventListener('devicemotion', handleMotion);
+        }
+        
+        // Обработчик движения устройства
+        function handleMotion(event) {
+            if (spoilerRevealed || !event.accelerationIncludingGravity) return;
             
             const acceleration = event.accelerationIncludingGravity;
             const currentTime = Date.now();
             
+            // Защита от слишком частых срабатываний
             if (currentTime - lastShakeTime < SHAKE_INTERVAL) {
                 return;
             }
             
-            const shakeForce = Math.abs(acceleration.x) + Math.abs(acceleration.y) + Math.abs(acceleration.z);
+            // Рассчитываем силу тряски
+            const shakeForce = Math.abs(acceleration.x) + 
+                              Math.abs(acceleration.y) + 
+                              Math.abs(acceleration.z);
             
             if (shakeForce > SHAKE_THRESHOLD) {
                 lastShakeTime = currentTime;
@@ -129,6 +89,7 @@
                     isShaking = true;
                     shakeCount = 0;
                     
+                    // Запускаем таймер
                     shakeTimer = setInterval(() => {
                         shakeCount += 100;
                         
@@ -142,23 +103,55 @@
             }
         }
         
-        function showSpoiler() {
-            spoilerRevealed = true;
-            spoilerElement.textContent = 'Код спойлера: ЮЗИЛИЩЕ';
-            spoilerElement.style.display = 'block';
+        // Инициализация
+        function init() {
+            // Проверяем, поддерживается ли DeviceMotion
+            if (!window.DeviceMotionEvent) {
+                console.log('DeviceMotion не поддерживается');
+                return;
+            }
             
-            // Дополнительно устанавливаем цвет через JavaScript
-            spoilerElement.style.color = '#00FF00';
-            spoilerElement.style.fontSize = '20px';
-            spoilerElement.style.fontWeight = 'bold';
-            spoilerElement.style.textShadow = '0 0 5px #00FF00, 0 0 20px #00FF00';
-            
-            window.removeEventListener('devicemotion', handleMotion);
+            // Для iOS 13+ нужен явный запрос разрешения
+            if (typeof DeviceMotionEvent.requestPermission === 'function') {
+                // Создаем кнопку для запроса разрешения (невидимую)
+                const permissionBtn = document.createElement('button');
+                permissionBtn.style.cssText = `
+                    position: fixed;
+                    top: 0;
+                    left: 0;
+                    width: 100%;
+                    height: 100%;
+                    opacity: 0;
+                    cursor: pointer;
+                    z-index: 9999;
+                `;
+                permissionBtn.textContent = '';
+                document.body.appendChild(permissionBtn);
+                
+                permissionBtn.onclick = function() {
+                    DeviceMotionEvent.requestPermission()
+                        .then(permissionState => {
+                            if (permissionState === 'granted') {
+                                startMotionTracking();
+                                document.body.removeChild(permissionBtn);
+                            }
+                        })
+                        .catch(console.error);
+                    return false;
+                };
+            } else {
+                // Для Android и других устройств
+                startMotionTracking();
+            }
         }
         
-        // Сброс тряски при бездействии
+        function startMotionTracking() {
+            window.addEventListener('devicemotion', handleMotion);
+        }
+        
+        // Сброс таймера при отсутствии движения
         let inactivityTimer;
-        window.addEventListener('devicemotion', function() {
+        function resetShakeTimer() {
             if (isShaking && !spoilerRevealed) {
                 clearTimeout(inactivityTimer);
                 inactivityTimer = setTimeout(() => {
@@ -169,11 +162,27 @@
                     }
                 }, 500);
             }
-        });
+        }
         
-        // Запуск при загрузке
-        window.addEventListener('DOMContentLoaded', function() {
-            setTimeout(initShakeDetection, 100);
+        // Добавляем обработчик для сброса
+        window.addEventListener('devicemotion', resetShakeTimer);
+        
+        // Запускаем при загрузке страницы
+        document.addEventListener('DOMContentLoaded', init);
+        
+        // Альтернативный способ для тестирования (работает в iframe)
+        document.addEventListener('click', function() {
+            // Если долго жмем (3 секунды), показываем спойлер для теста
+            let clickTimer = setTimeout(() => {
+                if (!spoilerRevealed) {
+                    showSpoiler();
+                }
+            }, 3000);
+            
+            document.addEventListener('mouseup', function cancelTest() {
+                clearTimeout(clickTimer);
+                document.removeEventListener('mouseup', cancelTest);
+            });
         });
         
     </script>
