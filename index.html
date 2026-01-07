@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Секретное слово</title>
+    <title></title>
     <style>
         * {
             margin: 0;
@@ -12,112 +12,89 @@
             -webkit-touch-callout: none;
             -webkit-user-select: none;
             user-select: none;
-            -webkit-tap-highlight-color: transparent;
+        }
+        
+        html, body {
+            width: 100%;
+            height: 100%;
+            background: white;
+            overflow: hidden;
         }
         
         body {
-            width: 100vw;
-            height: 100vh;
-            background-color: white;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-            touch-action: manipulation;
+            position: relative;
         }
         
-        .secret-word {
-            font-size: 24px;
-            color: #00ff00; /* ярко-зеленый цвет */
-            font-weight: bold;
-            opacity: 0; /* ИЗНАЧАЛЬНО ПОЛНОСТЬЮ ПРОЗРАЧНО */
-            visibility: hidden; /* СКРЫТО ИЗ ПОТОКА */
-            text-shadow: 0 0 10px rgba(0, 255, 0, 0.7);
-            font-family: Arial, sans-serif;
-            transition: opacity 0.15s ease;
-            pointer-events: none;
+        #secretWord {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: #00FF00;
+            font-weight: bold;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
+            display: none; /* СКРЫВАЕМ С ПОМОЩЬЮ DISPLAY: NONE */
+            font-family: Arial, sans-serif;
+            z-index: 1000;
         }
         
-        /* ТОЛЬКО ПРИ НАЛИЧИИ ЭТОГО КЛАССА СЛОВО ВИДНО */
-        .secret-word.show {
-            opacity: 1;
-            visibility: visible;
+        /* Класс для показа слова */
+        #secretWord.show {
+            display: block;
         }
     </style>
 </head>
 <body>
-    <div class="secret-word" id="secretWord">юзилищЕ</div>
-
+    <div id="secretWord">юзилище</div>
+    
     <script>
-        // Элемент со словом
-        const secretWordElement = document.getElementById('secretWord');
-        let touchStartTime = 0;
-        let lastTapTime = 0;
-        let tapCount = 0;
-        let tapTimeout;
+        const secretWord = document.getElementById('secretWord');
+        let isShowing = false;
         
-        // Функция для сброса счетчика касаний
-        function resetTapCounter() {
-            tapCount = 0;
-            lastTapTime = 0;
-        }
-        
-        // Функция показа слова
+        // Функция для показа слова
         function showWord() {
-            secretWordElement.classList.add('show');
+            secretWord.classList.add('show');
+            isShowing = true;
         }
         
-        // Функция скрытия слова
+        // Функция для скрытия слова
         function hideWord() {
-            secretWordElement.classList.remove('show');
+            secretWord.classList.remove('show');
+            isShowing = false;
         }
         
-        // Обработчик начала касания
+        // Обработка touchstart
         document.addEventListener('touchstart', function(e) {
             e.preventDefault();
             
-            // Получаем количество одновременных касаний
-            const simultaneousTouches = e.touches.length;
-            
-            // Если три пальца касаются одновременно
-            if (simultaneousTouches === 3) {
+            // Проверяем, сколько пальцев одновременно касаются
+            if (e.touches.length === 3) {
                 showWord();
             }
         }, { passive: false });
         
-        // Обработчик окончания касания
+        // Обработка touchend - скрываем при убирании пальцев
         document.addEventListener('touchend', function(e) {
-            // Если ни одного пальца не касается экрана
-            if (e.touches.length === 0) {
-                // Немедленно скрываем слово
-                hideWord();
-            }
+            hideWord();
         }, { passive: false });
         
-        // Обработчик движения пальцев
+        // Обработка touchmove - скрываем при движении
         document.addEventListener('touchmove', function(e) {
-            // Проверяем, сколько пальцев сейчас на экране
-            if (e.touches.length !== 3) {
-                hideWord();
-            }
+            hideWord();
         }, { passive: false });
         
-        // Также скрываем при любом другом взаимодействии
+        // Обработка touchcancel
         document.addEventListener('touchcancel', function(e) {
+            hideWord();
+        }, { passive: false });
+        
+        // Дополнительно: скрываем при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
             hideWord();
         });
         
-        // Предотвращаем стандартные действия браузера
-        document.addEventListener('contextmenu', function(e) {
-            e.preventDefault();
-            return false;
-        });
-        
-        // Изначально гарантируем, что слово скрыто
+        // Скрываем слово сразу при загрузке
         hideWord();
     </script>
 </body>
