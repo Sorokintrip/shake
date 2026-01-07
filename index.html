@@ -45,12 +45,16 @@
     </style>
 </head>
 <body>
-    <div id="secretWord" style="display: none;">Юзилищ</div>
+    <div id="secretWord" style="display: none;">Код к спойлеру: ЮЗИЛИЩЕ</div>
     
     <script>
         // Сначала полностью прячем элемент через inline стиль
         document.addEventListener('DOMContentLoaded', function() {
             const secretWord = document.getElementById('secretWord');
+
+        // Цвет и размер
+        secretWord.style.color = '#00FF00';
+        secretWord.style.fontSize = '24px';
             
             // Функция для показа слова
             function showWord() {
