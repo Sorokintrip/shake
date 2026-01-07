@@ -3,68 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title></title>
+    <title>Секретное слово</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            touch-action: manipulation;
-            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
         
         body {
             width: 100vw;
             height: 100vh;
-            overflow: hidden;
-            background-color: #ffffff;
+            background-color: white;
             display: flex;
-            align-items: center;
             justify-content: center;
-            font-family: Arial, sans-serif;
-            cursor: pointer;
+            align-items: center;
+            overflow: hidden;
         }
         
-        #word {
-            display: none;
-            font-size: 48px;
+        .secret-word {
+            font-size: 24px;
+            color: #00ff00; /* ярко-зеленый цвет */
             font-weight: bold;
-            color: #00FF00; /* Ярко-зеленый цвет */
-            text-align: center;
+            display: none; /* изначально скрыто */
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.3);
+            font-family: Arial, sans-serif;
+        }
+        
+        /* Показываем слово при наличии соответствующего класса */
+        .secret-word.show {
+            display: block;
         }
     </style>
 </head>
 <body>
-    <!-- Пустая страница до тапов -->
-    <div id="word">ЮЗИЛИЩЕ</div>
-    
+    <div class="secret-word" id="secretWord">юзилище</div>
+
     <script>
-        let tapCount = 0;
-        const maxTaps = 10;
-        const wordElement = document.getElementById('word');
+        let touchCount = 0;
+        let touchStartTime = 0;
+        const touchTimeout = 300; // время в мс для отслеживания тройного тапа
+        let touchTimer = null;
         
-        // Гарантируем, что текст скрыт при загрузке
-        wordElement.style.display = 'none';
+        // Элемент со словом
+        const secretWordElement = document.getElementById('secretWord');
         
-        function handleTap() {
-            tapCount++;
+        // Обработчик начала касания
+        document.addEventListener('touchstart', function(e) {
+            e.preventDefault(); // предотвращаем стандартное поведение
             
-            if (tapCount >= maxTaps) {
-                wordElement.style.display = 'block';
-                document.body.style.cursor = 'default';
-                document.body.removeEventListener('click', handleTap);
-                document.body.removeEventListener('touchstart', handleTouch);
+            touchCount++;
+            
+            // Сбрасываем таймер при каждом новом касании
+            if (touchTimer) {
+                clearTimeout(touchTimer);
             }
-        }
+            
+            // Если это первое касание, запоминаем время
+            if (touchCount === 1) {
+                touchStartTime = new Date().getTime();
+            }
+            
+            // Устанавливаем таймер для сброса счетчика касаний
+            touchTimer = setTimeout(() => {
+                touchCount = 0;
+            }, touchTimeout);
+            
+            // Если обнаружено три касания
+            if (touchCount === 3) {
+                // Показываем слово
+                secretWordElement.classList.add('show');
+                touchCount = 0; // сбрасываем счетчик
+            }
+        }, { passive: false });
         
-        function handleTouch(e) {
-            e.preventDefault();
-            handleTap();
-        }
+        // Обработчик окончания касания - скрываем слово когда пальцы убраны
+        document.addEventListener('touchend', function(e) {
+            // Не скрываем сразу, так как пользователь может продолжать тройное касание
+            // Скрытие произойдет через небольшой таймаут после последнего касания
+            setTimeout(() => {
+                secretWordElement.classList.remove('show');
+            }, 50);
+        }, { passive: false });
         
-        document.body.addEventListener('click', handleTap);
-        document.body.addEventListener('touchstart', handleTouch);
+        // Также скрываем слово при движении пальцев (чтобы было более отзывчиво)
+        document.addEventListener('touchmove', function(e) {
+            secretWordElement.classList.remove('show');
+        }, { passive: false });
         
+        // Предотвращаем контекстное меню на долгое нажатие
         document.addEventListener('contextmenu', function(e) {
             e.preventDefault();
             return false;
