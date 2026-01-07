@@ -19,14 +19,11 @@
             height: 100%;
             background: white;
             overflow: hidden;
-        }
-        
-        body {
-            position: relative;
+            position: fixed;
         }
         
         #secretWord {
-            position: absolute;
+            position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
@@ -34,68 +31,86 @@
             color: #00FF00;
             font-weight: bold;
             text-shadow: 0 0 10px rgba(0, 255, 0, 0.8);
-            display: none; /* СКРЫВАЕМ С ПОМОЩЬЮ DISPLAY: NONE */
+            visibility: hidden; /* Скрываем через visibility */
+            opacity: 0; /* И через opacity */
             font-family: Arial, sans-serif;
             z-index: 1000;
+            pointer-events: none;
         }
         
-        /* Класс для показа слова */
-        #secretWord.show {
-            display: block;
+        #secretWord.visible {
+            visibility: visible;
+            opacity: 1;
         }
     </style>
 </head>
 <body>
-    <div id="secretWord">юзилище</div>
+    <div id="secretWord" style="display: none;">Юзилище</div>
     
     <script>
-        const secretWord = document.getElementById('secretWord');
-        let isShowing = false;
-        
-        // Функция для показа слова
-        function showWord() {
-            secretWord.classList.add('show');
-            isShowing = true;
-        }
-        
-        // Функция для скрытия слова
-        function hideWord() {
-            secretWord.classList.remove('show');
-            isShowing = false;
-        }
-        
-        // Обработка touchstart
-        document.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-            
-            // Проверяем, сколько пальцев одновременно касаются
-            if (e.touches.length === 3) {
-                showWord();
-            }
-        }, { passive: false });
-        
-        // Обработка touchend - скрываем при убирании пальцев
-        document.addEventListener('touchend', function(e) {
-            hideWord();
-        }, { passive: false });
-        
-        // Обработка touchmove - скрываем при движении
-        document.addEventListener('touchmove', function(e) {
-            hideWord();
-        }, { passive: false });
-        
-        // Обработка touchcancel
-        document.addEventListener('touchcancel', function(e) {
-            hideWord();
-        }, { passive: false });
-        
-        // Дополнительно: скрываем при загрузке страницы
+        // Сначала полностью прячем элемент через inline стиль
         document.addEventListener('DOMContentLoaded', function() {
+            const secretWord = document.getElementById('secretWord');
+            
+            // Функция для показа слова
+            function showWord() {
+                secretWord.style.display = 'block';
+                setTimeout(() => {
+                    secretWord.classList.add('visible');
+                }, 10);
+            }
+            
+            // Функция для скрытия слова
+            function hideWord() {
+                secretWord.classList.remove('visible');
+                setTimeout(() => {
+                    secretWord.style.display = 'none';
+                }, 100);
+            }
+            
+            // Обработка touchstart
+            document.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                
+                // Проверяем, сколько пальцев одновременно касаются
+                if (e.touches.length === 3) {
+                    showWord();
+                }
+            }, { passive: false });
+            
+            // Обработка touchend - скрываем при убирании пальцев
+            document.addEventListener('touchend', function(e) {
+                if (e.touches.length === 0) {
+                    hideWord();
+                }
+            }, { passive: false });
+            
+            // Обработка touchmove - скрываем при движении
+            document.addEventListener('touchmove', function(e) {
+                if (e.touches.length !== 3) {
+                    hideWord();
+                }
+            }, { passive: false });
+            
+            // Обработка touchcancel
+            document.addEventListener('touchcancel', function(e) {
+                hideWord();
+            }, { passive: false });
+            
+            // Гарантируем, что слово скрыто при загрузке
             hideWord();
+            
+            // Добавляем обработчик перед уходом со страницы
+            window.addEventListener('beforeunload', function() {
+                hideWord();
+            });
         });
         
-        // Скрываем слово сразу при загрузке
-        hideWord();
+        // Также скрываем при загрузке window
+        window.addEventListener('load', function() {
+            const secretWord = document.getElementById('secretWord');
+            secretWord.style.display = 'none';
+        });
     </script>
 </body>
 </html>
